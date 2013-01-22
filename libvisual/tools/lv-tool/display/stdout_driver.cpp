@@ -22,6 +22,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#include "config.h"
 #include "stdout_driver.hpp"
 #include "display.hpp"
 #include "display_driver.hpp"
@@ -29,9 +30,18 @@
 #include <string>
 #include <unistd.h>
 
+#if defined(HAVE_GL) && defined(HAVE_OSMESA)
+#define USE_OSMESA 1
+#endif
+
 // MinGW unistd.h doesn't have *_FILENO or SEEK_* defined
 #ifdef VISUAL_WITH_MINGW
 #  define STDOUT_FILENO 1
+#endif
+
+#if USE_OSMESA
+#include <GL/gl.h>
+#include <GL/osmesa.h>
 #endif
 
 namespace {
@@ -43,6 +53,9 @@ namespace {
 
       StdoutDriver (Display& display)
           : m_display (display)
+      #if USE_OSMESA
+          , m_gl_context (nullptr)
+      #endif
       {}
 
       virtual ~StdoutDriver ()
@@ -56,6 +69,24 @@ namespace {
                                    unsigned int height,
                                    bool resizable)
       {
+      #if USE_OSMESA
+          if (m_gl_context) {
+              OSMesaDestroyContext (m_gl_context);
+          }
+
+          if (depth == VISUAL_VIDEO_DEPTH_GL) {
+              // FIXME: Need to parse actor video GL attributes and
+              // match them to what OSMesa supports
+
+              m_gl_context   = OSMesaCreateContextExt (OSMESA_RGB, 16, 0, 0, nullptr);
+              m_screen_video = LV::Video::create (width, height, VISUAL_VIDEO_DEPTH_24BIT);
+              OSMesaMakeCurrent (m_gl_context, m_screen_video->get_pixels (), GL_UNSIGNED_BYTE, width, height);
+          } else {
+              m_screen_video = LV::Video::create (width, height, depth);
+          }
+
+          return m_screen_video;
+      #else
           if (depth == VISUAL_VIDEO_DEPTH_GL)
           {
               visual_log (VISUAL_LOG_ERROR, "Cannot use stdout driver for OpenGL rendering");
@@ -65,10 +96,16 @@ namespace {
           m_screen_video = LV::Video::create (width, height, depth);
 
           return m_screen_video;
+      #endif
       }
 
       virtual void close ()
       {
+      #if USE_OSMESA
+          if (m_gl_context) {
+              OSMesaDestroyContext (m_gl_context);
+          }
+      #endif
           m_screen_video.reset ();
       }
 
@@ -99,6 +136,11 @@ namespace {
 
       virtual void update_rect (LV::Rect const& rect)
       {
+      #if USE_OSMESA
+          // Flush command buffers and make sure rendering completes
+          glFinish ();
+      #endif
+
           if (write (STDOUT_FILENO, m_screen_video->get_pixels (), m_screen_video->get_size ()) == -1)
               visual_log (VISUAL_LOG_ERROR, "Failed to write pixels to stdout");
       }
@@ -112,6 +154,10 @@ namespace {
 
       Display&     m_display;
       LV::VideoPtr m_screen_video;
+
+  #if USE_OSMESA
+      OSMesaContext m_gl_context;
+  #endif
   };
 
 } // anonymous namespace

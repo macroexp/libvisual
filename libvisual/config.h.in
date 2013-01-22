@@ -16,6 +16,7 @@
 #cmakedefine HAVE_ICONV        1
 #cmakedefine HAVE_SDL          1
 #cmakedefine HAVE_GL           1
+#cmakedefine HAVE_OSMESA       1
 
 #cmakedefine HAVE_DIRENT_H     1
 #cmakedefine HAVE_DLFCN_H      1
