@@ -1,26 +1,24 @@
-#include <libvisual/libvisual.h>
-#include <SDL.h>
 #include <unistd.h>
 #include <stdlib.h>
 
+#include <SDL.h>
+
+#include <libvisual/libvisual.h>
+
+
 SDL_Surface *screen;
 SDL_Color colors[256];
-int32_t *srcbuf;
-VisVideoDepth depth = VISUAL_VIDEO_DEPTH_32BIT;
-VisVideoScaleMethod interpol = VISUAL_VIDEO_SCALE_NEAREST;
+unsigned char *scrbuf;
+int bpp;
 
-VisInput *input;
 VisActor *actor;
-LV::VideoPtr actvid;
-LV::VideoPtr video;
-LV::VideoPtr video32_actor;
-LV::VideoPtr video32_image;
-LV::VideoPtr sdlvid;
-LV::VideoPtr scalevid;
+VisVideo *actvid;
+VisVideo *video;
+VisVideo *video32;
+VisVideo *sdlvid;
+VisVideo *scalevid;
 VisPalette *pal;
-
-int n_tile_cols = 3;
-int n_tile_rows = 3;
+VisInput *input;
 
 void sdl_fullscreen_toggle ();
 void sdl_fullscreen_xy (int *x, int *y);
@@ -29,7 +27,7 @@ void sdl_size_request (int width, int height);
 void sdl_init (int width, int height);
 void sdl_create (int width, int height);
 void sdl_draw_buf ();
-void do_alpha (LV::Video *vid, uint8_t rate);
+void do_alpha (VisVideo *vid, uint8_t rate);
 
 /* Fullscreen stuff */
 void sdl_fullscreen_toggle ()
@@ -136,11 +134,10 @@ void sdl_size_request (int width, int height)
 
 	sdl_create (width, height);
 
-	free (srcbuf);
-	srcbuf = (int32_t*)malloc (screen->pitch * screen->h);
-	memset (srcbuf, 0, screen->pitch * screen->h);
+	free (scrbuf);
+	scrbuf = malloc (screen->pitch * screen->h);
+	memset (scrbuf, 0, screen->pitch * screen->h);
 }
-
 
 void sdl_init (int width, int height)
 {
@@ -155,83 +152,29 @@ void sdl_init (int width, int height)
 
 void sdl_create (int width, int height)
 {
-	screen = SDL_SetVideoMode (width, height, visual_video_bpp_from_depth(depth) * 8, 0);
+	screen = SDL_SetVideoMode (width, height, bpp * 8, 0);
 }
 
 void sdl_draw_buf ()
 {
 	unsigned char *str = (unsigned char *) screen->pixels;
 
-	memcpy (str, srcbuf, screen->pitch * screen->h);
+	memcpy (str, scrbuf, screen->pitch * screen->h);
 
-	memset (srcbuf, 0, screen->pitch * screen->h);
+	memset (scrbuf, 0, screen->pitch * screen->h);
 	SDL_UpdateRect (screen, 0, 0, screen->w, screen->h);
 }
 
-void do_checkers(LV::VideoPtr const& destptr, LV::VideoPtr const& src1, LV::VideoPtr const& src2)
-{
-    static LV::Timer timer;
-    static int flip = -1;
-
-    if(flip == -1)
-    {
-        flip = 0;
-        timer.reset();
-        timer.start();
-    }
-    if(timer.elapsed().to_msecs() > 2000)
-    {
-        flip = !flip;
-        timer.reset();
-        timer.start();
-    }
-
-    LV::Color black = LV::Color::black();
-    destptr->fill_color(black);
-
-    unsigned int tile_width  = src1->get_width()  / n_tile_cols;
-    unsigned int tile_height = src1->get_height() / n_tile_rows;
-
-/*
-    LV::VideoPtr srcptr = flip % 2 == 0 ? src2 : src1;
-
-    LV::Rect area(0, 0, tile_width, tile_height);
-
-    area = LV::Rect::clip(destptr->get_extents(), area);
-
-    destptr->blit(area, srcptr, area, false);
-
-    //return;
-*/
-    for(unsigned int row = 0, y = 0;
-        y < (unsigned int)src1->get_height();
-        row++, y += tile_height)
-    {
-        for(unsigned int col = 0, x = 0;
-            x < (unsigned int)src2->get_width();
-            col++, x += tile_width)
-        {
-            LV::VideoPtr srcptr = (row + col + flip) & 1 ? src1 : src2;
-
-            LV::Rect area(x, y, tile_width, tile_height);
-
-            area = destptr->get_extents().clip (area);
-
-            destptr->blit(area, srcptr, area, false);
-        }
-    }
-}
-
-void do_alpha (LV::VideoPtr const& vid, uint8_t rate)
+void do_alpha (VisVideo *vid, uint8_t rate)
 {
 	int i;
-	uint32_t *ptr = (uint32_t *)vid->get_pixels();
+	uint32_t *ptr = visual_video_get_pixels(vid); //vid->pixels;
 	union {
 		uint32_t c32;
 		uint8_t c8[4];
 	} col;
 
-	for (i = 0; i < vid->get_width() * vid->get_height(); i++) {
+	for (i = 0; i < visual_video_get_width (vid) * visual_video_get_height (vid); i++) {
 		col.c32 = ptr[i];
 
 		col.c8[3] = rate;
@@ -246,20 +189,24 @@ void do_alpha (LV::VideoPtr const& vid, uint8_t rate)
 /* Main stuff */
 int main (int argc, char *argv[])
 {
-	int width = 512, height = 512;
+	int width = 1000, height = 600;
 	int alpha = 190;
 	int xoff = 0, yoff = -90;
-    int frames = 0;
+	int sxsize = 1000;
+	int sysize = 700;
+	int interpol = VISUAL_VIDEO_SCALE_NEAREST;
+        int frames = 0;
 	//VisTime start, end;
 
-
+	bpp = 4;
 	sdl_init (width, height);
+
+	scrbuf = malloc (screen->pitch * screen->h);
+	memset (scrbuf, 0, screen->pitch * screen->h);
 
 	SDL_Event event;
 
-    visual_log_set_verbosity(VISUAL_LOG_DEBUG);
 	visual_init (&argc, &argv);
-
 
 	if (argc > 1)
 		actor = visual_actor_new (argv[1]);
@@ -268,47 +215,41 @@ int main (int argc, char *argv[])
 
 	visual_actor_realize (actor);
 
-	VisVideo *tmpvid;
+	const char *image_file_path = argc > 2 ? argv[2] : "../images/bg.bmp";
 
-	if (argc > 2)
-		tmpvid = visual_video_load_from_file (argv[2]);
-	else
-		tmpvid = visual_video_load_from_file ("images/bg.bmp");
+	if (!(video = visual_video_load_from_file (image_file_path))) {
+		fprintf (stderr, "Failed to load image file '%s'\n", image_file_path);
+		return EXIT_FAILURE;
+	}
 
-    video = LV::Video::wrap(tmpvid->get_pixels(), false, tmpvid->get_width(), tmpvid->get_height(), tmpvid->get_depth());
+	actvid = visual_video_new ();
+	visual_actor_set_video (actor, actvid);
+	visual_video_set_depth (actvid, visual_video_depth_get_highest (visual_actor_get_supported_depth (actor)));
+	visual_video_set_dimension (actvid, width, height);
+	visual_video_allocate_buffer (actvid);
 
+	visual_actor_video_negotiate (actor, 0, FALSE, FALSE);
 
-    scalevid = LV::Video::create(screen->w, screen->h, video->get_depth());
-    scalevid->scale(video, interpol);
+	video32 = visual_video_new ();
+	visual_video_set_depth (video32, VISUAL_VIDEO_DEPTH_32BIT);
+	visual_video_set_dimension (video32, visual_video_get_width (video), visual_video_get_height (video));
+	visual_video_allocate_buffer (video32);
 
-    video32_image = LV::Video::create(screen->w, screen->h, depth);
+	scalevid = visual_video_new ();
+	visual_video_set_depth (scalevid, VISUAL_VIDEO_DEPTH_32BIT);
+	visual_video_set_dimension (scalevid, sxsize, sysize);
+	visual_video_allocate_buffer (scalevid);
 
-    // Set this once.
-    video32_image->convert_depth(scalevid);
-
-    video32_actor = LV::Video::create(screen->w, screen->h, depth);
-
-
-	srcbuf = (int32_t *)malloc (screen->pitch * screen->h);
-	memset (srcbuf, 0, screen->pitch * screen->h);
-
-    sdlvid = LV::Video::wrap(srcbuf, false, screen->w, screen->h, depth);
-
-    actvid = LV::Video::create(screen->w, screen->h, visual_video_depth_get_highest(visual_actor_get_supported_depth (actor)));
-
-	visual_actor_set_video (actor, actvid.get());
-
-	visual_actor_video_negotiate (actor, VISUAL_VIDEO_DEPTH_NONE, FALSE, FALSE);
+	sdlvid = visual_video_new ();
+	visual_video_set_depth (sdlvid, VISUAL_VIDEO_DEPTH_32BIT);
+	visual_video_set_dimension (sdlvid, screen->w, screen->h);
+	visual_video_set_pitch (sdlvid, screen->pitch);
+	visual_video_set_buffer (sdlvid, scrbuf);
 
 	input = visual_input_new ("debug");
 	visual_input_realize (input);
 
 	SDL_EnableKeyRepeat (SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-
-    LV::Rect area(0, 0, screen->w, screen->h);
-    video32_image->set_extents(area);
-    video32_actor->set_extents(area);
-    sdlvid->set_extents(area);
 
 	//visual_time_get (&start);
 
@@ -316,15 +257,35 @@ int main (int argc, char *argv[])
 		visual_input_run (input);
 		visual_actor_run (actor, input->audio);
 
-        video32_actor->convert_depth(actvid);
+		/* place on screen */
+//		visual_video_blit_overlay (sdlvid, video, 0, 0, FALSE);
 
-        scalevid->scale(video, interpol);
+		if (sxsize < 0)
+			sxsize = 0;
 
-        video32_image->convert_depth(scalevid);
+		if (sysize < 0)
+			sysize = 0;
 
-        do_checkers(sdlvid, video32_image, video32_actor);
+		if (sxsize != visual_video_get_width (scalevid) || sysize != visual_video_get_height (scalevid)) {
+			visual_video_set_dimension (scalevid, sxsize, sysize);
+			visual_video_allocate_buffer (scalevid);
+		}
 
-        //sdlvid->blit(video32_actor, 0, 0, true);
+		visual_video_convert_depth (video32, video);
+
+
+//		visual_video_alpha_fill (sdlvid, 0);
+
+//		visual_video_alpha_fill (video32, alpha);
+//		visual_video_alpha_color (video32, 0, 0, 0, 255);
+
+
+		do_alpha (video32, alpha);
+		visual_video_scale (scalevid, video32, interpol);
+
+
+		visual_video_blit (sdlvid, actvid, 0, 0, FALSE);
+		visual_video_blit (sdlvid, scalevid, xoff, yoff, TRUE);
 
 		sdl_draw_buf ();
 		frames++;
@@ -358,22 +319,22 @@ int main (int argc, char *argv[])
 							break;
 
 						case SDLK_q:
-							//sysize -= 10;
+							sysize -= 10;
 
 							break;
 
 						case SDLK_a:
-							//sysize += 10;
+							sysize += 10;
 
 							break;
 
 						case SDLK_z:
-							//sxsize -= 10;
+							sxsize -= 10;
 
 							break;
 
 						case SDLK_x:
-							//sxsize += 10;
+							sxsize += 10;
 
 							break;
 
@@ -435,3 +396,4 @@ out:
 
 	return EXIT_SUCCESS;
 }
+

@@ -1,34 +1,35 @@
-/* Libvisual - The audio visualisation framework cli tool
- *
- * Copyright (C) 2012      Libvisual team
- *               2004-2006 Dennis Smit
- *
- * Authors: Daniel Hiepler <daniel@niftylight.de>
- *          Chong Kai Xiong <kaixiong@codeleft.sg>
- *          Dennis Smit <ds@nerds-incorporated.org>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 2.1
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- */
+// lv-tool - Libvisual commandline tool
+//
+// Copyright (C) 2012-2013 Libvisual team
+//               2004-2006 Dennis Smit
+//
+// Authors: Daniel Hiepler <daniel@niftylight.de>
+//          Chong Kai Xiong <kaixiong@codeleft.sg>
+//          Dennis Smit <ds@nerds-incorporated.org>
+//
+// This file is part of lv-tool.
+//
+// lv-tool is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 2 of the License, or
+// (at your option) any later version.
+//
+// lv-tool is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with lv-tool.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config.h"
 #include "display/display.hpp"
 #include "display/display_driver_factory.hpp"
+#include "gettext.h"
 #include <libvisual/libvisual.h>
+#include <iostream>
 #include <string>
 #include <cstdio>
-#include <iostream>
 #include <cstdlib>
 #include <cstring>
 #include <getopt.h>
@@ -66,6 +67,12 @@ namespace {
   bool have_seed = 0;
   uint32_t seed = 0;
 
+  enum class CycleDir
+  {
+      PREV,
+      NEXT
+  };
+
   /** print info about libvisual plugin */
   void print_plugin_info(VisPluginInfo const& info)
   {
@@ -98,7 +105,7 @@ namespace {
               print_plugin_info(*input.info);
       }
 
-      
+
       std::printf("===== ACTORS =====\n");
       auto const& actors =
           LV::PluginRegistry::instance()->get_plugins_by_type (VISUAL_PLUGIN_TYPE_ACTOR);
@@ -113,8 +120,8 @@ namespace {
           for (auto actor : actors)
               print_plugin_info(*actor.info);
       }
-      
-      
+
+
       std::printf("===== MORPHS =====\n");
       auto const& morphs =
           LV::PluginRegistry::instance()->get_plugins_by_type (VISUAL_PLUGIN_TYPE_MORPH);
@@ -129,13 +136,13 @@ namespace {
           for (auto morph : morphs)
               print_plugin_info(*morph.info);
       }
-      
+
   }
 
   /** print commandline help */
   void print_help(std::string const& name)
   {
-      std::printf("libvisual commandline tool - %s\n"
+      std::printf("libvisual commandline tool - http://libvisual.org\n"
                   "Usage: %s [options]\n\n"
                   "Valid options:\n"
                   "\t--help\t\t\t-h\t\tThis help text\n"
@@ -149,9 +156,9 @@ namespace {
                   "\t--morph <morph>\t\t-m <morph>\tUse this morph plugin [%s]\n"
                   "\t--seed <seed>\t\t-s <seed>\tSet random seed\n"
                   "\t--fps <n>\t\t-f <n>\t\tLimit output to n frames per second (if display driver supports it) [%d]\n"
-                  "\t--framecount <n>\t-F <n>\t\tOutput n frames, then exit.\n\n"
-                  "\t--exclude <actors>\t-x <actors>\tProvide a list of actors to exclude.\n\n",
-                  "http://github.com/StarVisuals/libvisual",
+                  "\t--framecount <n>\t-F <n>\t\tOutput n frames, then exit.\n"
+                  "\t--exclude <actors>\t-x <actors>\tProvide a list of actors to exclude.\n"
+                  "\n",
                   name.c_str (),
                   width, height,
                   driver_name.c_str (),
@@ -159,6 +166,13 @@ namespace {
                   actor_name.c_str (),
                   morph_name.c_str (),
                   frame_rate);
+
+        std::printf("Available output drivers:\n");
+        for(auto driver_name : DisplayDriverFactory::instance().get_driver_list())
+        {
+            std::printf("\t%s\n", driver_name.c_str());
+        }
+
   }
 
 
@@ -171,21 +185,21 @@ namespace {
   int parse_args(int argc, char *argv[])
   {
       static struct option loptions[] = {
-		  {"help",        no_argument,       0, 'h'},
-		  {"plugin-help", no_argument,       0, 'p'},
-		  {"verbose",     no_argument,       0, 'v'},
-		  {"dimensions",  required_argument, 0, 'D'},
-		  {"driver",      required_argument, 0, 'd'},
-		  {"input",       required_argument, 0, 'i'},
-		  {"actor",       required_argument, 0, 'a'},
-		  {"morph",       required_argument, 0, 'm'},
-		  {"fps",         required_argument, 0, 'f'},
-		  {"seed",        required_argument, 0, 's'},
+          {"help",        no_argument,       0, 'h'},
+          {"plugin-help", no_argument,       0, 'p'},
+          {"verbose",     no_argument,       0, 'v'},
+          {"dimensions",  required_argument, 0, 'D'},
+          {"driver",      required_argument, 0, 'd'},
+          {"input",       required_argument, 0, 'i'},
+          {"actor",       required_argument, 0, 'a'},
+          {"morph",       required_argument, 0, 'm'},
+          {"fps",         required_argument, 0, 'f'},
+          {"seed",        required_argument, 0, 's'},
           {"exclude",     required_argument, 0, 'x'},
-		  {"framecount",  required_argument, 0, 'F'},
-		  {"depth",       required_argument, 0, 'c'},
-		  {0,             0,                 0,  0 }
-	  };
+          {"framecount",  required_argument, 0, 'F'},
+          {"depth",       required_argument, 0, 'c'},
+          {0,             0,                 0,  0 }
+      };
 
       int index, argument;
 
@@ -206,12 +220,12 @@ namespace {
 
               // --verbose
               case 'v': {
-				  VisLogSeverity v = visual_log_get_verbosity();
-				  v = (VisLogSeverity) ((int) v-1);
-				  
-				  if(v <= VISUAL_LOG_MIN)
-					  break;
-				  
+                  VisLogSeverity v = visual_log_get_verbosity();
+                  v = (VisLogSeverity) ((int) v-1);
+
+                  if(v <= VISUAL_LOG_MIN)
+                      break;
+
                   visual_log_set_verbosity(v);
                   break;
               }
@@ -229,9 +243,9 @@ namespace {
               // --depth
               case 'c': {
                   if (std::sscanf (optarg, "%d", &color_depth) != 1 ||
-                      visual_video_depth_enum_from_value(color_depth) == VISUAL_VIDEO_DEPTH_NONE)
+                      visual_video_depth_enum_from_value(color_depth) == -VISUAL_ERROR_VIDEO_INVALID_DEPTH)
                   {
-                      std::cerr << "Invalid dimensions: '" << optarg << "'. Use <width>x<height> (e.g. 320x200)\n";
+                      std::cerr << "Invalid depth: '" << optarg << "'. Use integer value (e.g. 24)\n";
                       return -1;
                   }
                   break;
@@ -312,32 +326,37 @@ namespace {
       return 0;
   }
 
-  void v_cycleActor (int prev)
+  std::string cycle_actor_name (std::string const& name, CycleDir dir)
   {
-      auto name = prev ? visual_actor_get_prev_by_name(actor_name.c_str())
-                       : visual_actor_get_next_by_name(actor_name.c_str());
+      auto cycler = (dir == CycleDir::NEXT) ? visual_actor_get_next_by_name
+                                            : visual_actor_get_prev_by_name;
 
-      if (!name) {
-          name = prev ? visual_actor_get_prev_by_name(0)
-                      : visual_actor_get_next_by_name(0);
+      auto new_name = cycler (name.c_str ());
+      if (!new_name) {
+          new_name = cycler (nullptr);
       }
 
-      actor_name = name;
+      // FIXME: this won't work if an actor's name is used as part of
+      // another actor's name
+      if (exclude_actors.find (new_name) != std::string::npos) {
+          return cycle_actor_name (new_name, dir);
+      }
 
-      if (std::strstr (exclude_actors.c_str(), name) != 0)
-          v_cycleActor(prev);
+      return new_name;
   }
 
 #if 0
-  void v_cycleMorph ()
+  std::string cycle_morph_name (std::string const& name, CycleDir dir)
   {
-      auto name = visual_morph_get_next_by_name(morph_name.c_str());
+      auto cycler = (dir == CycleDir::NEXT) ? visual_morph_get_next_by_name
+                                            : visual_morph_get_prev_by_name;
 
-      if(!name) {
-          name = visual_morph_get_next_by_name(0);
+      auto new_name = cycler (name.c_str ());
+      if (!new_name) {
+          new_name = cycler (nullptr);
       }
 
-      morph_name = name;
+      return new_name;
   }
 #endif
 
@@ -351,10 +370,10 @@ int main (int argc, char **argv)
 
     // default loglevel
     visual_log_set_verbosity (VISUAL_LOG_ERROR);
-	
-	// initialize libvisual once (this is meant to be called only once,
+
+    // initialize libvisual once (this is meant to be called only once,
     // visual_init() after visual_quit() results in undefined state)
-	LV::System::init (argc, argv);
+    LV::System::init (argc, argv);
 
     try {
         // parse commandline arguments
@@ -370,13 +389,11 @@ int main (int argc, char **argv)
         bin.switch_set_style(VISUAL_SWITCH_STYLE_DIRECT);
 
         // Let the bin manage plugins. There's a bug otherwise.
-        bin.connect(actor_name, input_name);
+        if (!bin.connect(actor_name, input_name)) {
+            throw std::runtime_error ("Failed to start pipeline with actor '" + actor_name + "' and input '" + input_name + "'");
+        }
 
-        // initialize actor plugin
-        std::cerr << "Loading actor '" << actor_name << "'...\n";
         auto actor = bin.get_actor();
-        if (!actor)
-            throw std::runtime_error ("Failed to load actor '" + actor_name + "'");
 
         // Set random seed
         if (have_seed) {
@@ -387,30 +404,28 @@ int main (int argc, char **argv)
             seed++;
         }
 
-        // initialize input plugin
-        std::cerr << "Loading input '" << input_name << "'...\n";
-        auto input = bin.get_input();
-        if (!input) {
-            throw std::runtime_error ("Failed to load input '" + input_name + "'");
-        }
-
         // Select output colour depth
 
         VisVideoDepth depth;
+        int depthflag = visual_actor_get_supported_depth (actor);
 
-        if (color_depth == 0) {
-            // Pick the best display depth directly supported by actor
-
-            int depthflag = visual_actor_get_supported_depth (actor);
-
-            if (depthflag == VISUAL_VIDEO_DEPTH_GL) {
-                depth = visual_video_depth_get_highest (depthflag);
-            }
-            else {
+        // Pick the best display depth directly supported by non GL actor
+        if(depthflag != VISUAL_VIDEO_DEPTH_GL)
+        {
+            if (color_depth == 0)
+            {
                 depth = visual_video_depth_get_highest_nogl (depthflag);
             }
-        } else {
-            depth = visual_video_depth_enum_from_value (color_depth);
+            // Pick user chosen colordepth
+            else
+            {
+                depth = visual_video_depth_enum_from_value (color_depth);
+            }
+        }
+        /* GL actor */
+        else
+        {
+            depth = visual_video_depth_get_highest (depthflag);
         }
 
         bin.set_depth (depth);
@@ -423,7 +438,10 @@ int main (int argc, char **argv)
         // create display
         auto video = display.create(depth, vidoptions, width, height, true);
         if(!video)
-            throw std::runtime_error("Failed to get VisVideo from display");
+            throw std::runtime_error("Failed to setup display for rendering");
+
+        // Set the display title
+        display.set_title(_("lv-tool"));
 
         // put it all together
         bin.set_video(video);
@@ -439,12 +457,45 @@ int main (int argc, char **argv)
         // rendering statistics
         uint64_t frames_drawn = 0;
 
+        // frame rate control state
+        int64_t const frame_period_us = frame_rate > 0 ? VISUAL_USECS_PER_SEC / frame_rate : 0;
+        LV::Time last_frame_time;
+        bool draw_frame = true;
+
         // main loop
         bool running = true;
         bool visible = true;
 
         while (running)
         {
+            // Control frame rate
+            if (frame_rate > 0) {
+                if (frames_drawn > 0) {
+                    draw_frame = (LV::Time::now () - last_frame_time).to_usecs () >= frame_period_us;
+                }
+            }
+
+            if (draw_frame) {
+                display.lock ();
+
+                // Draw audio data and render
+                bin.run();
+
+                // Display rendering
+                display.update_all ();
+
+                display.unlock ();
+
+                // Record frame time
+                last_frame_time = LV::Time::now ();
+
+                // All frames rendered?
+                frames_drawn++;
+                if (frame_count > 0 && frames_drawn >= frame_count) {
+                    break;
+                }
+            }
+
             LV::Event ev;
 
             // Handle all events
@@ -469,7 +520,9 @@ int main (int argc, char **argv)
                         display.lock();
                         width = ev.event.resize.width;
                         height = ev.event.resize.height;
+
                         video = display.create(depth, vidoptions, width, height, true);
+                        display.set_title(_("lv-tool"));
 
                         bin.set_video (video);
                         bin.sync(false);
@@ -487,10 +540,10 @@ int main (int argc, char **argv)
                     case VISUAL_EVENT_MOUSEBUTTONDOWN:
                     {
                         // switch to next actor
-                        v_cycleActor(1);
+                        actor_name = cycle_actor_name (actor_name, CycleDir::NEXT);
 
                         std::cerr << "Switching to actor '" << actor_name << "'...\n";
-                        bin.switch_actor(actor_name);
+                        bin.switch_actor (actor_name);
 
                         break;
                     }
@@ -561,34 +614,13 @@ int main (int argc, char **argv)
 
                 display.unlock();
             }
-
-            // Do a run cycle
-            if (!visible)
-                continue;
-
-            display.lock();
-
-            bin.run();
-
-            // All frames rendered?
-            frames_drawn++;
-            if (frame_count > 0 && frames_drawn >= frame_count)
-                running = false;
-
-            display.update_all();
-            display.unlock();
         }
-
-        /* Cleanup */
-        //visual_plugin_unload(visual_actor_get_plugin(actor));
-        //visual_plugin_unload(visual_input_get_plugin(input));
-
     }
     catch (std::exception& error) {
         std::cerr << error.what () << std::endl;
     }
 
-    visual_quit ();
+    LV::System::destroy ();
 
     return EXIT_SUCCESS;
 }

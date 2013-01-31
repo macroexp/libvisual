@@ -227,10 +227,10 @@ namespace LV {
       return m_impl->morph;
   }
 
-  void Bin::connect (VisActor *actor, VisInput *input)
+  bool Bin::connect (VisActor *actor, VisInput *input)
   {
-      visual_return_if_fail (actor != nullptr);
-      visual_return_if_fail (input != nullptr);
+      visual_return_val_if_fail (actor != nullptr, false);
+      visual_return_val_if_fail (input != nullptr, false);
 
       set_actor (actor);
       set_input (input);
@@ -244,23 +244,29 @@ namespace LV {
       }
 
       m_impl->depthforcedmain = m_impl->depth;
+
+      return true;
   }
 
-  void Bin::connect (std::string const& actname, std::string const& inname)
+  bool Bin::connect (std::string const& actname, std::string const& inname)
   {
       /* Create the actor */
       auto actor = visual_actor_new (actname.c_str ());
-      visual_return_if_fail (actor != nullptr);
+      visual_return_val_if_fail (actor != nullptr, false);
 
       /* Create the input */
       auto input = visual_input_new (inname.c_str ());
-      visual_return_if_fail (input != nullptr);
+      visual_return_val_if_fail (input != nullptr, false);
 
       /* Connect */
-      connect (actor, input);
+      if (!connect (actor, input)) {
+          return false;
+      }
 
       m_impl->managed = true;
       m_impl->inputmanaged = true;
+
+      return true;
   }
 
   void Bin::sync (bool noevent)
@@ -449,7 +455,6 @@ namespace LV {
       visual_return_if_fail (actor != nullptr);
 
       auto video = LV::Video::create();
-      video->ref();
       video->copy_attrs(m_impl->actvideo);
 
       auto depthflag = visual_actor_get_supported_depth (actor);
@@ -594,7 +599,6 @@ namespace LV {
           /* Allocate a private video for the main actor, so the morph
            * can draw to the framebuffer */
           auto privvid = Video::create ();
-          privvid->ref();
 
           visual_log (VISUAL_LOG_DEBUG, "actvideo->depth %d actmorph->video->depth %d",
                       m_impl->actvideo->get_depth (),

@@ -202,9 +202,21 @@ IF(ENABLE_TOOLS)
   PKG_CHECK_MODULES(OSMESA osmesa)
   SET(HAVE_OSMESA ${OSMESA_FOUND})
 
-  ADD_SUBDIRECTORY(tools/tests)
   ADD_SUBDIRECTORY(tools/lv-tool)
   ADD_SUBDIRECTORY(tools/benchmarks)
+ENDIF()
+
+# Tests
+OPTION(ENABLE_TESTS "Build tests" no)
+IF(ENABLE_TESTS)
+  ENABLE_TESTING()
+  ADD_SUBDIRECTORY(tests)
+ENDIF()
+
+# Examples
+OPTION(ENABLE_EXAMPLES "Build examples" yes)
+IF(ENABLE_EXAMPLES)
+  ADD_SUBDIRECTORY(examples)
 ENDIF()
 
 # Generate pkg-config file

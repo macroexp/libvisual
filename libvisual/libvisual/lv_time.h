@@ -33,16 +33,12 @@
  * @{
  */
 
-#define VISUAL_NSEC_PER_SEC    1000000000
-#define VISUAL_USEC_PER_SEC    1000000
-#define VISUAL_MSEC_PER_SEC    1000
-#define VISUAL_USEC_PER_MSEC   1000
-#define VISUAL_NSEC_PER_MSEC   1000000
-#define VISUAL_NSEC_PER_USEC   1000
-
-/**
- * The VisTime structure can contain seconds and microseconds for timing purpose.
- */
+#define VISUAL_NSECS_PER_SEC    1000000000
+#define VISUAL_USECS_PER_SEC    1000000
+#define VISUAL_MSECS_PER_SEC    1000
+#define VISUAL_USECS_PER_MSEC   1000
+#define VISUAL_NSECS_PER_MSEC   1000000
+#define VISUAL_NSECS_PER_USEC   1000
 
 #ifdef __cplusplus
 
@@ -51,6 +47,7 @@
 
 namespace LV {
 
+  //! Encodes time.
   class LV_API Time
   {
   public:
@@ -71,19 +68,19 @@ namespace LV {
           double int_part, frac_part;
           frac_part = std::modf (secs, &int_part);
 
-          return Time (int_part, frac_part * VISUAL_NSEC_PER_SEC);
+          return Time (int_part, frac_part * VISUAL_NSECS_PER_SEC);
       }
 
       static Time from_msecs (uint64_t msecs)
       {
-          return Time (msecs / VISUAL_MSEC_PER_SEC,
-                       (msecs % VISUAL_MSEC_PER_SEC) * VISUAL_NSEC_PER_MSEC);
+          return Time (msecs / VISUAL_MSECS_PER_SEC,
+                       (msecs % VISUAL_MSECS_PER_SEC) * VISUAL_NSECS_PER_MSEC);
       }
 
       static Time from_usecs (uint64_t usecs)
       {
-          return Time (usecs / VISUAL_USEC_PER_SEC,
-                       (usecs % VISUAL_USEC_PER_SEC) * VISUAL_NSEC_PER_USEC);
+          return Time (usecs / VISUAL_USECS_PER_SEC,
+                       (usecs % VISUAL_USECS_PER_SEC) * VISUAL_NSECS_PER_USEC);
       }
 
       static Time now ();
@@ -103,7 +100,7 @@ namespace LV {
 
           if (nsec < 0) {
               sec--;
-              nsec += VISUAL_NSEC_PER_SEC;
+              nsec += VISUAL_NSECS_PER_SEC;
           }
 
           return *this;
@@ -142,31 +139,23 @@ namespace LV {
       //! Converts the time to seconds
       double to_secs () const
       {
-          return sec + nsec * (1.0 / VISUAL_NSEC_PER_SEC);
+          return sec + nsec * (1.0 / VISUAL_NSECS_PER_SEC);
       }
 
       //! Converts the time to milliseconds
       uint64_t to_msecs () const
       {
-          return sec * VISUAL_MSEC_PER_SEC + nsec / VISUAL_NSEC_PER_MSEC;
+          return uint64_t (sec) * VISUAL_MSECS_PER_SEC + nsec / VISUAL_NSECS_PER_MSEC;
       }
 
       //! Converts the time to microseconds
       uint64_t to_usecs () const
       {
-          return sec * VISUAL_USEC_PER_SEC + nsec / VISUAL_NSEC_PER_USEC;
+          return uint64_t (sec) * VISUAL_USECS_PER_SEC + nsec / VISUAL_NSECS_PER_USEC;
       }
 
       //! Sleeps for a period of time. This will yield the calling thread.
       static void usleep (uint64_t usecs);
-
-      // FIXME: Find a better place to put these functions
-
-      //! Initializes LV's timer subsystem. DO NOT use.
-      static void init ();
-
-      //! Deinitializes LV's timer subsystem. DO NOT use.
-      static void deinit ();
   };
 
   class LV_API Timer
