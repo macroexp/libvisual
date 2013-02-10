@@ -31,8 +31,6 @@
  * @{
  */
 
-#define VISUAL_AUDIO(obj) (VISUAL_CHECK_CAST ((obj), VisAudio))
-
 #define VISUAL_AUDIO_CHANNEL_LEFT  "left"
 #define VISUAL_AUDIO_CHANNEL_RIGHT "right"
 
@@ -79,7 +77,24 @@ namespace LV {
 
       Audio ();
 
+      Audio (Audio const&) = delete;
+
+      /**
+       * Move constructor
+       */
+      Audio (Audio&& rhs);
+
+      /**
+       * Destructor
+       */
       ~Audio ();
+
+      Audio& operator= (Audio const&) = delete;
+
+      /**
+       * Move assignment operator
+       */
+      Audio& operator= (Audio&& rhs);
 
       bool get_sample (BufferPtr const& buffer, std::string const& channel_name);
 
@@ -113,7 +128,7 @@ namespace LV {
 
       class Impl;
 
-      const std::unique_ptr<Impl> m_impl;
+      std::unique_ptr<Impl> m_impl;
   };
 
 } // LV namespace

@@ -23,15 +23,17 @@
 // along with lv-tool.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config.h"
+#include "version.h"
 #include "display/display.hpp"
 #include "display/display_driver_factory.hpp"
 #include "gettext.h"
 #include <libvisual/libvisual.h>
+#include <stdexcept>
 #include <iostream>
 #include <string>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
+#include <csignal>
 #include <getopt.h>
 
 // Defaults
@@ -67,10 +69,28 @@ namespace {
   bool have_seed = 0;
   uint32_t seed = 0;
 
+  volatile std::sig_atomic_t terminate_process = false;
+
   enum class CycleDir
   {
       PREV,
       NEXT
+  };
+
+  /** Class to manage LV's lifecycle */
+  class Libvisual
+  {
+  public:
+
+      Libvisual (int& argc, char**& argv)
+      {
+          LV::System::init (argc, argv);
+      }
+
+      ~Libvisual ()
+      {
+          LV::System::destroy ();
+      }
   };
 
   /** print info about libvisual plugin */
@@ -142,8 +162,7 @@ namespace {
   /** print commandline help */
   void print_help(std::string const& name)
   {
-      std::printf("libvisual commandline tool - http://libvisual.org\n"
-                  "Usage: %s [options]\n\n"
+      std::printf("Usage: %s [options]\n\n"
                   "Valid options:\n"
                   "\t--help\t\t\t-h\t\tThis help text\n"
                   "\t--plugin-help\t\t-p\t\tList of installed plugins + information\n"
@@ -220,13 +239,13 @@ namespace {
 
               // --verbose
               case 'v': {
-                  VisLogSeverity v = visual_log_get_verbosity();
-                  v = (VisLogSeverity) ((int) v-1);
+                  VisLogSeverity level = visual_log_get_verbosity ();
+                  level = VisLogSeverity (int (level) - 1);
 
-                  if(v <= VISUAL_LOG_MIN)
-                      break;
+                  if (int (level) >= 0) {
+                      visual_log_set_verbosity (level);
+                  }
 
-                  visual_log_set_verbosity(v);
                   break;
               }
 
@@ -243,7 +262,7 @@ namespace {
               // --depth
               case 'c': {
                   if (std::sscanf (optarg, "%d", &color_depth) != 1 ||
-                      visual_video_depth_enum_from_value(color_depth) == -VISUAL_ERROR_VIDEO_INVALID_DEPTH)
+                      visual_video_depth_enum_from_value(color_depth) == VISUAL_VIDEO_DEPTH_NONE)
                   {
                       std::cerr << "Invalid depth: '" << optarg << "'. Use integer value (e.g. 24)\n";
                       return -1;
@@ -322,8 +341,21 @@ namespace {
           }
       }
 
-
       return 0;
+  }
+
+  void handle_termination_signal (int signal)
+  {
+      terminate_process = true;
+  }
+
+  /**
+   * Handle process termination signals.
+   */
+  void setup_signal_handlers ()
+  {
+      std::signal (SIGINT, handle_termination_signal);
+      std::signal (SIGTERM, handle_termination_signal);
   }
 
   std::string cycle_actor_name (std::string const& name, CycleDir dir)
@@ -365,28 +397,40 @@ namespace {
 
 int main (int argc, char **argv)
 {
-    // print warm welcome
-    std::cerr << argv[0] << " v0.1\n";
-
-    // default loglevel
-    visual_log_set_verbosity (VISUAL_LOG_ERROR);
-
-    // initialize libvisual once (this is meant to be called only once,
-    // visual_init() after visual_quit() results in undefined state)
-    LV::System::init (argc, argv);
-
     try {
+        // print warm welcome
+        std::cerr << visual_truncate_path (argv[0], 1) << " - "
+                  << PACKAGE_STRING
+                  << " (" << LV_REVISION << ") commandline tool - "
+                  << PACKAGE_URL << "\n";
+
+        // setup signal handlers
+        setup_signal_handlers ();
+
+        // default loglevel
+        visual_log_set_verbosity (VISUAL_LOG_ERROR);
+
+        // initialize LV
+        Libvisual main {argc, argv};
+
         // parse commandline arguments
-        int parseRes = parse_args(argc, argv);
-        if (parseRes < 0)
+        int parse_result = parse_args (argc, argv);
+        if (parse_result < 0) {
             throw std::runtime_error ("Failed to parse arguments");
-        else if (parseRes > 0)
-            throw std::runtime_error ("");
+        }
+        if (parse_result > 0) {
+            return EXIT_SUCCESS;
+        }
+
+        // Set system-wide random seed
+        if (have_seed) {
+            LV::System::instance()->set_rng_seed (seed);
+        }
 
         // create new VisBin for video output
         LV::Bin bin;
         bin.set_supported_depth(VISUAL_VIDEO_DEPTH_ALL);
-        bin.switch_set_style(VISUAL_SWITCH_STYLE_DIRECT);
+        bin.use_morph(false);
 
         // Let the bin manage plugins. There's a bug otherwise.
         if (!bin.connect(actor_name, input_name)) {
@@ -395,19 +439,10 @@ int main (int argc, char **argv)
 
         auto actor = bin.get_actor();
 
-        // Set random seed
-        if (have_seed) {
-            auto  plugin_data = visual_actor_get_plugin(actor);
-            auto& r_context   = *visual_plugin_get_random_context (plugin_data);
-
-            r_context.set_seed (seed);
-            seed++;
-        }
-
         // Select output colour depth
 
         VisVideoDepth depth;
-        int depthflag = visual_actor_get_supported_depth (actor);
+        int depthflag = actor->get_supported_depths ();
 
         // Pick the best display depth directly supported by non GL actor
         if(depthflag != VISUAL_VIDEO_DEPTH_GL)
@@ -430,15 +465,16 @@ int main (int argc, char **argv)
 
         bin.set_depth (depth);
 
-        auto vidoptions = visual_actor_get_video_attribute_options(actor);
+        auto vidoptions = actor->get_video_attribute_options ();
 
         // initialize display
         Display display (driver_name);
 
         // create display
         auto video = display.create(depth, vidoptions, width, height, true);
-        if(!video)
+        if(!video) {
             throw std::runtime_error("Failed to setup display for rendering");
+        }
 
         // Set the display title
         display.set_title(_("lv-tool"));
@@ -458,16 +494,22 @@ int main (int argc, char **argv)
         uint64_t frames_drawn = 0;
 
         // frame rate control state
-        int64_t const frame_period_us = frame_rate > 0 ? VISUAL_USECS_PER_SEC / frame_rate : 0;
+        uint64_t const frame_period_us = frame_rate > 0 ? VISUAL_USECS_PER_SEC / frame_rate : 0;
         LV::Time last_frame_time;
         bool draw_frame = true;
 
         // main loop
         bool running = true;
-        bool visible = true;
+        //bool visible = true;
 
         while (running)
         {
+            // Check if process termination was signaled
+            if (terminate_process) {
+                std::cerr << "Received signal to terminate process, exiting..\n";
+                return EXIT_SUCCESS;
+            }
+
             // Control frame rate
             if (frame_rate > 0) {
                 if (frames_drawn > 0) {
@@ -476,15 +518,13 @@ int main (int argc, char **argv)
             }
 
             if (draw_frame) {
-                display.lock ();
+                DisplayLock lock {display};
 
                 // Draw audio data and render
                 bin.run();
 
                 // Display rendering
                 display.update_all ();
-
-                display.unlock ();
 
                 // Record frame time
                 last_frame_time = LV::Time::now ();
@@ -501,7 +541,7 @@ int main (int argc, char **argv)
             // Handle all events
             display.drain_events(localqueue);
 
-            auto pluginqueue = visual_plugin_get_eventqueue(visual_actor_get_plugin (bin.get_actor()));
+            auto pluginqueue = visual_plugin_get_event_queue (bin.get_actor()->get_plugin ());
 
             while (localqueue.poll(ev))
             {
@@ -517,7 +557,8 @@ int main (int argc, char **argv)
 
                     case VISUAL_EVENT_RESIZE:
                     {
-                        display.lock();
+                        DisplayLock lock {display};
+
                         width = ev.event.resize.width;
                         height = ev.event.resize.height;
 
@@ -526,8 +567,6 @@ int main (int argc, char **argv)
 
                         bin.set_video (video);
                         bin.sync(false);
-
-                        display.unlock();
 
                         break;
                     }
@@ -582,13 +621,13 @@ int main (int argc, char **argv)
 
                     case VISUAL_EVENT_QUIT:
                     {
-                        running = FALSE;
+                        running = false;
                         break;
                     }
 
                     case VISUAL_EVENT_VISIBILITY:
                     {
-                        visible = ev.event.visibility.is_visible;
+                        //visible = ev.event.visibility.is_visible;
                         break;
                     }
 
@@ -601,7 +640,8 @@ int main (int argc, char **argv)
 
             if (bin.depth_changed())
             {
-                display.lock();
+                DisplayLock lock {display};
+
                 int depthflag = bin.get_depth();
                 VisVideoDepth depth = visual_video_depth_get_highest(depthflag);
 
@@ -611,16 +651,14 @@ int main (int argc, char **argv)
                 bin.set_video(video);
 
                 bin.sync(true);
-
-                display.unlock();
             }
         }
+
+        return EXIT_SUCCESS;
     }
     catch (std::exception& error) {
         std::cerr << error.what () << std::endl;
+
+        return EXIT_FAILURE;
     }
-
-    LV::System::destroy ();
-
-    return EXIT_SUCCESS;
 }

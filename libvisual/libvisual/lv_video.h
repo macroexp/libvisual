@@ -38,15 +38,6 @@
  * @{
  */
 
-#define VISUAL_VIDEO(obj)                   (VISUAL_CHECK_CAST ((obj), VisVideo))
-#define VISUAL_VIDEO_ATTR_OPTIONS(obj)      (VISUAL_CHECK_CAST ((obj), VisVideoAttrOptions))
-
-#define VISUAL_VIDEO_ATTR_OPTIONS_GL_ENTRY(options, attr, val)  \
-    options.gl_attrs[attr].attribute = attr;  \
-    options.gl_attrs[attr].value = val;       \
-    options.gl_attrs[attr].mutated = TRUE;
-
-
 /* NOTE: The depth find helper code in lv_actor depends on an arrangment from low to high */
 /**
  * Enumerate that defines video depths for use within plugins, libvisual functions, etc.
@@ -121,7 +112,6 @@ struct _VisVideo;
 typedef void (*VisVideoComposeFunc)(VisVideo *dest, VisVideo *src);
 
 struct _VisVideoAttrOptions {
-    VisObject      object;
     VisVideoDepth  depth;
     VisGLAttrEntry gl_attrs[VISUAL_GL_ATTRIBUTE_LAST];
 };
@@ -162,7 +152,7 @@ namespace LV {
        */
       static VideoPtr create (int width, int height, VisVideoDepth depth);
 
-      static VideoPtr wrap (void* buffer, bool owner, int width, int height, VisVideoDepth depth);
+      static VideoPtr wrap (void* buffer, bool owner, int width, int height, VisVideoDepth depth, int pitch = 0);
 
       static VideoPtr create_sub (VideoConstPtr const& src, Rect const& srect);
 
@@ -190,14 +180,6 @@ namespace LV {
       ~Video ();
 
       /**
-       * Sets the video dimensions.
-       *
-       * @param width  width in pixels
-       * @param height height in pixels
-       */
-      void set_dimension (int width, int height);
-
-      /**
        * Returns the video width.
        *
        * @return width in pixels
@@ -219,7 +201,7 @@ namespace LV {
       void set_depth (VisVideoDepth depth);
 
       /**
-       * Sets the video depth.
+       * Returns the video depth.
        *
        * @return video depth
        */
@@ -249,18 +231,11 @@ namespace LV {
       int get_bpp () const;
 
       /**
-       * Sets the pixel buffer to a given memory block.
-       *
-       * @param ptr pointer to memory block
-       */
-      void set_buffer (void* ptr);
-
-      /**
        * Allocates a buffer based on the assigned dimensions and depth.
        *
        * @return true if successful, false otherwise
        *
-       * @see set_dimensions(), set_depth(), set_pitch().
+       * @see set_depth(), set_pitch().
        */
       bool allocate_buffer ();
 
@@ -490,6 +465,8 @@ namespace LV {
       mutable unsigned int m_ref_count;
 
       Video ();
+
+      void set_dimension (int width, int height, int pitch = 0);
   };
 
   inline void intrusive_ptr_add_ref (Video const* video)
@@ -512,7 +489,7 @@ LV_BEGIN_DECLS
 
 LV_API VisVideo *visual_video_new (void);
 LV_API VisVideo *visual_video_new_with_buffer (int width, int height, VisVideoDepth depth);
-LV_API VisVideo *visual_video_new_wrap_buffer (void *buffer, int owner, int width, int height, VisVideoDepth depth);
+LV_API VisVideo *visual_video_new_wrap_buffer (void *buffer, int owner, int width, int height, VisVideoDepth depth, int pitch);
 LV_API VisVideo *visual_video_load_from_file  (const char *path);
 
 LV_API void visual_video_ref   (VisVideo *video);
@@ -529,10 +506,6 @@ LV_API int visual_video_compare_attrs_ignore_pitch (VisVideo *src1, VisVideo *sr
 
 LV_API void        visual_video_set_palette (VisVideo *video, VisPalette *pal);
 LV_API VisPalette* visual_video_get_palette (VisVideo *video);
-
-LV_API void visual_video_set_buffer (VisVideo *video, void *ptr);
-
-LV_API void visual_video_set_dimension (VisVideo *video, int width, int height);
 
 LV_API void visual_video_set_attrs (VisVideo *video, int width, int height, int pitch, VisVideoDepth depth);
 

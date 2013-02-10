@@ -24,8 +24,7 @@
 #ifndef _LV_TIME_H
 #define _LV_TIME_H
 
-#include <libvisual/lv_defines.h>
-#include <libvisual/lv_object.h>
+#include <libvisual/lv_types.h>
 #include <time.h>
 
 /**
@@ -165,11 +164,20 @@ namespace LV {
       //! Creates a new Timer
       Timer ();
 
+      //! Copy constructor
+      Timer (Timer const& timer);
+
+      //! Move constructor
+      Timer (Timer&& rhs);
+
+      //! Destructor
       ~Timer ();
 
-      // FIXME: Timer should be made non-copyable
-      Timer (Timer const& timer);
+      //! Copy assignment operator
       Timer& operator= (Timer const& rhs);
+
+      //! Move assignment operator
+      Timer& operator= (Timer&& rhs);
 
       //! Checks if the timer is active.
       bool is_active () const;
@@ -195,7 +203,7 @@ namespace LV {
   private:
 
       class Impl;
-      const std::unique_ptr<Impl> m_impl;
+      std::unique_ptr<Impl> m_impl;
   };
 
 } // LV namespace
@@ -216,9 +224,6 @@ typedef struct _VisTimer VisTimer;
 struct _VisTimer;
 
 #endif /* __cplusplus */
-
-#define VISUAL_TIME(obj)   (VISUAL_CHECK_CAST ((obj), VisTime))
-#define VISUAL_TIMER(obj)  (VISUAL_CHECK_CAST ((obj), VisTimer))
 
 LV_BEGIN_DECLS
 

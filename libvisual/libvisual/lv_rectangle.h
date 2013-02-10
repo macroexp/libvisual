@@ -24,8 +24,6 @@
 #ifndef _LV_RECTANGLE_H
 #define _LV_RECTANGLE_H
 
-#include <libvisual/lv_object.h>
-
 /**
  * @defgroup VisRectangle VisRectangle
  * @{
@@ -242,8 +240,6 @@ namespace LV {
 } // LV namespace
 
 #endif /* __cplusplus */
-
-#define VISUAL_RECTANGLE(obj)               (VISUAL_CHECK_CAST ((obj, VisRectangle))
 
 #ifdef __cplusplus
 typedef ::LV::Rect VisRectangle;

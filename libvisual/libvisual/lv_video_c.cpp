@@ -48,9 +48,9 @@ VisVideo *visual_video_new_with_buffer (int width, int height, VisVideoDepth dep
     return self.get ();
 }
 
-VisVideo *visual_video_new_wrap_buffer (void *buffer, int owner, int width, int height, VisVideoDepth depth)
+VisVideo *visual_video_new_wrap_buffer (void *buffer, int owner, int width, int height, VisVideoDepth depth, int pitch)
 {
-    auto self = LV::Video::wrap (buffer, owner, width, height, depth);
+    auto self = LV::Video::wrap (buffer, owner, width, height, depth, pitch);
     if (self) {
         LV::intrusive_ptr_add_ref (self.get ());
     }
@@ -134,20 +134,6 @@ VisPalette *visual_video_get_palette (VisVideo *self)
     } else {
         return nullptr;
     }
-}
-
-void visual_video_set_buffer (VisVideo *self, void *buffer)
-{
-    visual_return_if_fail (self != nullptr);
-
-    self->set_buffer (buffer);
-}
-
-void visual_video_set_dimension (VisVideo *self, int width, int height)
-{
-    visual_return_if_fail (self != nullptr);
-
-    self->set_dimension (width, height);
 }
 
 int visual_video_get_width (VisVideo *self)

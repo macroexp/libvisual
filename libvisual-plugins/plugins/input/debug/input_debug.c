@@ -43,10 +43,10 @@ typedef struct {
 	VisTime *last_upload_time;
 } DebugPriv;
 
-static int inp_debug_init (VisPluginData *plugin);
-static int inp_debug_cleanup (VisPluginData *plugin);
-static int inp_debug_events (VisPluginData *plugin, VisEventQueue *events);
-static int inp_debug_upload (VisPluginData *plugin, VisAudio *audio);
+static int  inp_debug_init    (VisPluginData *plugin);
+static void inp_debug_cleanup (VisPluginData *plugin);
+static int  inp_debug_events  (VisPluginData *plugin, VisEventQueue *events);
+static int  inp_debug_upload  (VisPluginData *plugin, VisAudio *audio);
 
 static void change_param (VisPluginData *plugin, VisParam *param);
 static void setup_wave (DebugPriv *priv);
@@ -71,7 +71,7 @@ const VisPluginInfo *get_plugin_info (void)
 		.init     = inp_debug_init,
 		.cleanup  = inp_debug_cleanup,
 		.events   = inp_debug_events,
-		.plugin   = VISUAL_OBJECT (&input)
+		.plugin   = &input
 	};
 
 	return &info;
@@ -84,7 +84,7 @@ static int inp_debug_init (VisPluginData *plugin)
 #endif
 
 	DebugPriv *priv = visual_mem_new0 (DebugPriv, 1);
-	visual_object_set_private (VISUAL_OBJECT (plugin), priv);
+	visual_plugin_set_private (plugin, priv);
 
 	VisParamList *params = visual_plugin_get_params (plugin);
 	visual_param_list_add_many (params,
@@ -105,16 +105,15 @@ static int inp_debug_init (VisPluginData *plugin)
 
 	setup_wave (priv);
 
-	return 0;
+	return TRUE;
 }
 
-static int inp_debug_cleanup (VisPluginData *plugin)
+static void inp_debug_cleanup (VisPluginData *plugin)
 {
-	DebugPriv *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
+	DebugPriv *priv = visual_plugin_get_private (plugin);
 
 	visual_time_free (priv->last_upload_time);
-
-	return 0;
+	visual_mem_free (priv);
 }
 
 static void setup_wave (DebugPriv *priv)
@@ -142,7 +141,7 @@ static int inp_debug_events (VisPluginData *plugin, VisEventQueue *events)
 		}
 	}
 
-	return 0;
+	return TRUE;
 }
 
 static int inp_debug_upload (VisPluginData *plugin, VisAudio *audio)
@@ -150,7 +149,7 @@ static int inp_debug_upload (VisPluginData *plugin, VisAudio *audio)
 	/* FIXME: Wave is incrementally calculated and will very gradually
 	   increase/decrease in frequency due to error accumulation */
 
-	DebugPriv *priv = visual_object_get_private (VISUAL_OBJECT (plugin));
+	DebugPriv *priv = visual_plugin_get_private (plugin);
 
 	/* Sleep for the appropriate amount of time to simulate blocking
 	 * due to buffer underruns */
@@ -197,5 +196,5 @@ static int inp_debug_upload (VisPluginData *plugin, VisAudio *audio)
 
 	visual_buffer_unref (buffer);
 
-	return 0;
+    return TRUE;
 }

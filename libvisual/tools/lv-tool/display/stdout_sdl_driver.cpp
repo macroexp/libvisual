@@ -131,15 +131,13 @@ namespace {
                   videoflags |= SDL_HWACCEL;
 
               for (unsigned int i = VISUAL_GL_ATTRIBUTE_NONE; i < VISUAL_GL_ATTRIBUTE_LAST; i++) {
-                  if (vidoptions->gl_attrs[i].mutated) {
-                      SDL_GLattr sdl_attribute =
-                          sdl_gl_attribute_map[vidoptions->gl_attrs[i].attribute];
+                  SDL_GLattr sdl_attribute =
+                      sdl_gl_attribute_map[vidoptions->gl_attrs[i].attribute];
 
-                      if (sdl_attribute < 0)
-                          continue;
+                  if (sdl_attribute < 0)
+                      continue;
 
-                      SDL_GL_SetAttribute (sdl_attribute, vidoptions->gl_attrs[i].value);
-                  }
+                  SDL_GL_SetAttribute (sdl_attribute, vidoptions->gl_attrs[i].value);
               }
 
               bpp = videoinfo->vfmt->BitsPerPixel;
@@ -161,7 +159,8 @@ namespace {
                                             false,
                                             m_screen->w,
                                             m_screen->h,
-                                            depth);
+                                            depth,
+                                            m_screen->pitch);
 
           SDL_EnableKeyRepeat (SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
@@ -310,14 +309,14 @@ namespace {
                   case SDL_KEYUP:
                       visual_event_queue_add (&eventqueue,
                                               visual_event_new_keyboard (VisKey(event.key.keysym.sym),
-                                                                         event.key.keysym.mod,
+                                                                         VisKeyMod(event.key.keysym.mod),
                                                                          VISUAL_KEY_UP));
                       break;
 
                   case SDL_KEYDOWN:
                       visual_event_queue_add (&eventqueue,
                                               visual_event_new_keyboard (VisKey(event.key.keysym.sym),
-                                                                         event.key.keysym.mod,
+                                                                         VisKeyMod(event.key.keysym.mod),
                                                                          VISUAL_KEY_DOWN));
                       break;
 

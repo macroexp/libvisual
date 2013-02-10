@@ -24,6 +24,7 @@
 #ifndef _LV_SONGINFO_H
 #define _LV_SONGINFO_H
 
+#include <libvisual/lv_types.h>
 #include <libvisual/lv_time.h>
 #include <libvisual/lv_video.h>
 
@@ -207,8 +208,6 @@ namespace LV {
 } // LV namespace
 
 #endif /* __cplusplus */
-
-#define VISUAL_SONGINFO(obj)   (VISUAL_CHECK_CAST ((obj), VisSongInfo))
 
 #ifdef __cplusplus
 typedef ::LV::SongInfo VisSongInfo;

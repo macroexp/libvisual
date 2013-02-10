@@ -52,8 +52,6 @@ ENDFOREACH()
 CHECK_INCLUDE_FILE(unistd.h    HAVE_UNISTD_H)
 CHECK_INCLUDE_FILE(dlfcn.h     HAVE_DLFCN_H)
 CHECK_INCLUDE_FILE(dirent.h    HAVE_DIRENT_H)
-CHECK_INCLUDE_FILE(sched.h     HAVE_SCHED_H)
-CHECK_INCLUDE_FILE(sys/sched.h HAVE_SYS_SCHED_H)
 CHECK_FUNCTION_EXISTS(sysconf HAVE_SYSCONF)
 
 # Check threading implementation
@@ -201,6 +199,14 @@ IF(ENABLE_TOOLS)
 
   PKG_CHECK_MODULES(OSMESA osmesa)
   SET(HAVE_OSMESA ${OSMESA_FOUND})
+
+  # Give users heads up about needing SDL and OpenGL for visual display
+  IF(NOT HAVE_SDL)
+    MESSAGE(WARNING "SDL is required for lv-tool to support visual display")
+  ENDIF()
+  IF(NOT HAVE_GL)
+    MESSAGE(WARNING "OpenGL is required for lv-tool to support OpenGL visualisations")
+  ENDIF()
 
   ADD_SUBDIRECTORY(tools/lv-tool)
   ADD_SUBDIRECTORY(tools/benchmarks)
