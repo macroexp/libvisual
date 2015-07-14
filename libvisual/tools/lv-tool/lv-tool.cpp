@@ -207,20 +207,20 @@ namespace {
   int parse_args(int argc, char *argv[])
   {
       static struct option loptions[] = {
-          {"help",        no_argument,       0, 'h'},
-          {"plugin-help", no_argument,       0, 'p'},
-          {"verbose",     no_argument,       0, 'v'},
-          {"dimensions",  required_argument, 0, 'D'},
-          {"driver",      required_argument, 0, 'd'},
-          {"input",       required_argument, 0, 'i'},
-          {"actor",       required_argument, 0, 'a'},
-          {"morph",       required_argument, 0, 'm'},
-          {"fps",         required_argument, 0, 'f'},
-          {"seed",        required_argument, 0, 's'},
-          {"exclude",     required_argument, 0, 'x'},
-          {"framecount",  required_argument, 0, 'F'},
-          {"switch",      required_argument, 0, 'S'},
-          {"depth",       required_argument, 0, 'c'},
+          {(char*)"help",        no_argument,       0, 'h'},
+          {(char*)"plugin-help", no_argument,       0, 'p'},
+          {(char*)"verbose",     no_argument,       0, 'v'},
+          {(char*)"dimensions",  required_argument, 0, 'D'},
+          {(char*)"driver",      required_argument, 0, 'd'},
+          {(char*)"input",       required_argument, 0, 'i'},
+          {(char*)"actor",       required_argument, 0, 'a'},
+          {(char*)"morph",       required_argument, 0, 'm'},
+          {(char*)"fps",         required_argument, 0, 'f'},
+          {(char*)"seed",        required_argument, 0, 's'},
+          {(char*)"exclude",     required_argument, 0, 'x'},
+          {(char*)"framecount",  required_argument, 0, 'F'},
+          {(char*)"switch",      required_argument, 0, 'S'},
+          {(char*)"depth",       required_argument, 0, 'c'},
           {0,             0,                 0,  0 }
       };
 

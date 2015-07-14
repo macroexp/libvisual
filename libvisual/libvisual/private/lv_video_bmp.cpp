@@ -27,6 +27,7 @@
 #include "lv_common.h"
 #include "lv_bits.h"
 #include "lv_util.hpp"
+#include "lv_error.h"
 
 #include <istream>
 #include <cstring>
@@ -394,7 +395,7 @@ namespace LV {
           case BI_RGB:
               result = load_uncompressed (fp, video, bi_bitcount);
               #if VISUAL_BIG_ENDIAN == 1
-              if (error == VISUAL_OK)
+              if (result == true)
                   flip_byte_order (video);
               #endif
               break;

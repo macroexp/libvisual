@@ -22,6 +22,7 @@
 #include "config.h"
 #include "gettext.h"
 #include <libvisual/libvisual.h>
+#include <sys/select.h>
 #include <gdk/gdk.h>
 
 VISUAL_PLUGIN_API_VERSION_VALIDATOR

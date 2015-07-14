@@ -70,7 +70,6 @@ LV_API int visual_math_is_power_of_2 (int n);
  * @return Next highest power of 2
  */
 LV_API unsigned int visual_math_round_power_of_2 (unsigned int n);
-
 /**
  * Multiplies an array of floats with a constant multiplicand, using SIMD instructions on supported CPUs
  *

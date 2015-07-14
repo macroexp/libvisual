@@ -1211,7 +1211,7 @@ void UtilStr::SetFloatValue( float inValue, int inPercision ) {
 		deci_digits = 10 - left_digits;
 		if ( deci_digits > inPercision )
 			deci_digits = inPercision;
-		scale =  pow( 10, deci_digits );
+		scale =  pow( 10.0, deci_digits );
 		SetValue( inValue * scale, scale, deci_digits ); }
 	else
 		Assign( "Overflow" );

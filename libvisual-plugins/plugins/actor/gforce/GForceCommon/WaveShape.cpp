@@ -209,7 +209,7 @@ void WaveShape::Draw( long inNumSteps, PixPort& inDest, float inFader, WaveShape
 	else {
 		w2Waves = inWave2 -> mNumWaves;
 		dialate = inMorphPct;
-		mShapeTrans = pow( dialate, SHAPE_MORPH_ALPHA );
+		mShapeTrans = pow( dialate, static_cast<float>(SHAPE_MORPH_ALPHA) );
 		SetupFrame( inWave2, mShapeTrans );
 
 		if ( mNumWaves > w2Waves ) {
@@ -219,7 +219,7 @@ void WaveShape::Draw( long inNumSteps, PixPort& inDest, float inFader, WaveShape
 			maxWaves = w2Waves;
 
 		// Set the wave scale factor to the wave leaving/arriving
-		dialate = 20.0 * pow( dialate, 4.0 ) + 1.0;
+		dialate = 20.0 * pow( dialate, static_cast<float>(4.0) ) + 1.0;
 
 		// Calc the x and y scale factors for wave 2
 		xscaleW2 = xoff;

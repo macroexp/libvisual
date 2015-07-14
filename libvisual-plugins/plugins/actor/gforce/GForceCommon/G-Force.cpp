@@ -627,7 +627,7 @@ void GForce::ManageColorChanges() {
 		// If in a ColorMap transition/morph then we must set mColorTrans, for it's linked into mGF_Palette
 		if ( mColorTransTime > 0 ) {
 			float t = (float) ( mColorTransEnd - mT_MS ) / ( (float) mColorTransTime );
-			mColorTrans = pow( t, TRANSITION_ALPHA );
+			mColorTrans = pow( t, static_cast<float>(TRANSITION_ALPHA) );
 		}
 
 		// Evaluate the palette at this time
@@ -985,7 +985,7 @@ void GForce::RecordSample( long inCurTime ) {
 		// Is the text is about to expire? if not, continue drawing.
 		if ( t <= 1 ) {
 
-			intensity = 255.5 * pow( t, 1.5 );
+			intensity = 255.5 * pow( t, static_cast<float>(1.5) );
 			mCurPort -> SetTextColor( mPalette[ intensity ] );
 			mCurPort -> SetTrackTextFont();
 			mCurPort -> DrawText( mTrackTextPos.h, mTrackTextPos.v, mTrackText ); }

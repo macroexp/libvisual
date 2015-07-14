@@ -1,6 +1,13 @@
 #include <math.h>
 #include <PixPort.h>
 
+#ifndef RANONCE
+#define RANONCE
+	int32_t sqrt(int32_t _number){
+		double d = _number;
+		return static_cast<int>(std::sqrt(d) + 0.5);
+	}
+#endif
 
 #if CLR_INTERP
 	#if P_SZ != 1
